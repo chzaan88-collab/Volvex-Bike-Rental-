@@ -11,7 +11,7 @@ FROM node:20 AS frontend-assets
 
 WORKDIR /build
 
-# Install npm dependencies (leverages Docker layer cache)
+# Install npm dependencies
 COPY package.json package-lock.json* ./
 RUN npm install
 
@@ -19,12 +19,6 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-# ───────────────
-# Stage 2: Production PHP + Apache
-# ───────────────
-FROM php:8.2-apache
-
-# Install system packages for PHP extensions and Composer
 # ───────────────
 # Stage 2: Production PHP + Apache
 # ───────────────
@@ -48,55 +42,45 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && docker-php-ext-install -j$(nproc) pdo pdo_mysql pdo_sqlite gd mbstring zip \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Composer (official installer)
+# Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Enable Apache mod_rewrite (required by Laravel .htaccess)
+# Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
-# ─────────────────────────────────────────────
-#  Configure Apache: DocumentRoot -> /var/www/html/public
-# ─────────────────────────────────────────────
+# Configure Apache DocumentRoot -> /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf \
   && sed -ri -e 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf /etc/apache2/sites-available/000-default.conf \
   && sed -ri -e "s/Options Indexes FollowSymLinks/Options -Indexes +FollowSymLinks/g" /etc/apache2/sites-available/000-default.conf
 
-# Set working directory
 WORKDIR /var/www/html
 
 # Copy compiled frontend assets from Stage 1
 COPY --from=frontend-assets /build/public/build/ /var/www/html/public/build/
 
-# Copy project files (everything in the frontend/ directory)
+# Copy project files
 COPY . .
 
-# Install PHP dependencies — production mode with optimized autoloader
-RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+# Ensure storage and cache directories exist with correct write permissions BEFORE composer install
+RUN mkdir -p /var/www/html/storage/framework/views \
+             /var/www/html/storage/framework/sessions \
+             /var/www/html/storage/framework/cache \
+             /var/www/html/storage/logs \
+             /var/www/html/bootstrap/cache \
+             /var/www/html/database \
+  && touch /var/www/html/database/database.sqlite \
+  && chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
 
-# Create SQLite database file and ensure storage dirs are ready
-RUN touch /var/www/html/database/database.sqlite \
-  && chmod 644 /var/www/html/database/database.sqlite
+# Install PHP dependencies without running post-install scripts prematurely
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --prefer-dist
 
-# ─────────────────────────────────────────────
-#  Set ownership and permissions
-#  storage/       — log files, compiled views, session files
-#  bootstrap/cache — framework cache
-# ─────────────────────────────────────────────
-RUN chown -R www-data:www-data \
-      /var/www/html/storage \
-      /var/www/html/bootstrap/cache \
-      /var/www/html/database/database.sqlite \
-  && find /var/www/html/storage -type f -exec chmod 644 {} \; \
-  && find /var/www/html/storage -type d -exec chmod 755 {} \; \
-  && find /var/www/html/bootstrap/cache -type f -exec chmod 644 {} \; \
-  && find /var/www/html/bootstrap/cache -type d -exec chmod 755 {} \;
+# Set final ownership for www-data
+RUN chown -R www-data:www-data /var/www/html
 
-# Install startup script that handles Render's dynamic PORT
+# Install startup script
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
 
-# Port exposed in the image (overridden at runtime by start.sh via $PORT)
 EXPOSE 80
 
-# Container start command — reads $PORT from Render and launches Apache
 CMD ["/start.sh"]
