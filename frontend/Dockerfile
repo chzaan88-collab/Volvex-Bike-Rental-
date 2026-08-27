@@ -25,6 +25,12 @@ RUN npm run build
 FROM php:8.2-apache
 
 # Install system packages for PHP extensions and Composer
+# ───────────────
+# Stage 2: Production PHP + Apache
+# ───────────────
+FROM php:8.2-apache
+
+# Install system packages for PHP extensions and Composer
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     unzip \
@@ -34,10 +40,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libonig-dev \
     libxml2-dev \
     libzip-dev \
+    sqlite3 \
+    libsqlite3-dev \
     zip \
     curl \
   && docker-php-ext-configure gd --with-freetype --with-jpeg \
-  && docker-php-ext-install pdo pdo_mysql pdo_sqlite gd mbstring zip \
+  && docker-php-ext-install -j$(nproc) pdo pdo_mysql pdo_sqlite gd mbstring zip \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Composer (official installer)
