@@ -1,0 +1,47 @@
+# ─────────────────────────────────────────────
+#  Render Configuration — Bike Rental System
+#  Defines both the FastAPI backend and the
+#  Laravel frontend as Web Services.
+# ─────────────────────────────────────────────
+
+services:
+  # ── Backend (FastAPI) ──────────────────────────
+  - type: web
+    name: bike-rental-backend
+    rootDir: backend
+    env: docker
+    plan: free
+    healthCheckPath: /docs
+    autoDeploy: true
+    envVars:
+      - key: FASTAPI_ENV
+        value: production
+      - key: DATABASE_URL
+        value: sqlite:///./bike_sharing.db
+
+  # ── Frontend (Laravel) ─────────────────────────
+  - type: web
+    name: bike-rental-frontend
+    rootDir: frontend
+    env: docker
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        value: base64:/zj1/DlL5HNWNmBP3YEQ0CbdDJOAq54woYW3xXD/bWQ=
+      - key: DB_CONNECTION
+        value: sqlite
+      - key: DB_DATABASE
+        value: /var/www/html/database/database.sqlite
+      - key: FASTAPI_BASE_URL
+        value: https://bike-rental-backend.onrender.com/api/v1
+      - key: SESSION_DRIVER
+        value: file
+      - key: CACHE_STORE
+        value: file
+      - key: QUEUE_CONNECTION
+        value: sync
