@@ -13,7 +13,13 @@ class FastApiClient
 
     public function __construct()
     {
-        $this->baseUrl = rtrim(config('services.fastapi.base_url'), '/');
+        // Fallback to Live Render FastAPI backend if ENV/Config is empty
+        $url = config('services.fastapi.base_url') 
+            ?: env('API_BASE_URL') 
+            ?: env('VITE_API_BASE_URL') 
+            ?: 'https://volvex-bike-rental.onrender.com';
+
+        $this->baseUrl = rtrim($url, '/');
     }
 
     protected function client(): PendingRequest

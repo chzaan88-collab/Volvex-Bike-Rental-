@@ -36,7 +36,7 @@ return [
     ],
 
     'fastapi' => [
-        'base_url' => env('FASTAPI_BASE_URL', 'http://127.0.0.1:8000/api/v1'),
+        'base_url' => env('FASTAPI_BASE_URL', env('API_BASE_URL', 'https://volvex-bike-rental.onrender.com/api/v1')),
     ],
 
 ];
