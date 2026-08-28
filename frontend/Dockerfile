@@ -72,7 +72,8 @@ RUN mkdir -p /var/www/html/storage/framework/views \
   && chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
 
 # Install PHP dependencies without running post-install scripts prematurely
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --prefer-dist
+# Pehle wali composer install line ko is se replace karein:
+RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Set final ownership for www-data
 RUN chown -R www-data:www-data /var/www/html
