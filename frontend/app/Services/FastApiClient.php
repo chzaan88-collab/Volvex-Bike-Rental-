@@ -39,6 +39,18 @@ class FastApiClient
         return $request;
     }
 
+    // Auth Helper Methods
+    public function register(array $data)
+    {
+        return $this->post('/auth/register', $data);
+    }
+
+    public function login(array $credentials)
+    {
+        return $this->post('/auth/login', $credentials);
+    }
+
+    // Generic HTTP Verbs
     public function post(string $endpoint, array $data = [])
     {
         return $this->client()->post($endpoint, $data);
