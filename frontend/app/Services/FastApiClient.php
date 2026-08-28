@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Log;
 
 class FastApiClient
 {
@@ -11,12 +12,44 @@ class FastApiClient
 
     public function __construct()
     {
-        $url = config('services.fastapi.base_url') 
-            ?: env('API_BASE_URL') 
-            ?: env('VITE_API_BASE_URL') 
-            ?: 'https://volvex-bike-rental.onrender.com/api/v1';
+        $candidates = [
+            config('services.fastapi.base_url'),
+            env('API_BASE_URL'),
+            env('VITE_API_BASE_URL'),
+        ];
 
-        $this->baseUrl = !empty($url) ? rtrim($url, '/') : 'https://volvex-bike-rental.onrender.com/api/v1';
+        $resolved = null;
+
+        foreach ($candidates as $candidate) {
+            $candidate = is_string($candidate) ? trim($candidate) : $candidate;
+
+            if (!empty($candidate) && $this->hasSchemeAndHost($candidate)) {
+                $resolved = $candidate;
+                break;
+            }
+        }
+
+        // Fallback if nothing valid was found (missing, empty, or no scheme/host)
+        if (!$resolved) {
+            $resolved = 'https://volvex-bike-rental.onrender.com/api/v1';
+
+            Log::warning('FastApiClient: falling back to default base_url. Check services.fastapi.base_url / API_BASE_URL / VITE_API_BASE_URL env values.');
+        }
+
+        $this->baseUrl = rtrim($resolved, '/');
+
+        Log::info('FastApiClient initialized with base_url: ' . $this->baseUrl);
+    }
+
+    /**
+     * Validate that a URL string has both a scheme (http/https) and a host.
+     */
+    private function hasSchemeAndHost(string $url): bool
+    {
+        $parts = parse_url($url);
+
+        return isset($parts['scheme'], $parts['host'])
+            && in_array(strtolower($parts['scheme']), ['http', 'https'], true);
     }
 
     private function getFullUrl(string $endpoint): string
