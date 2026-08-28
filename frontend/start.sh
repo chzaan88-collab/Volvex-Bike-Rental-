@@ -28,9 +28,12 @@ chmod 644 "$DB_FILE"
 # ─── Ensure storage and cache are writable ───
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
+# ─── Clear Laravel config and cache ───
+php artisan config:clear
+php artisan route:clear
+php artisan cache:clear
+
 # ─── Run database migrations (best-effort) ───
-# Migrations ensure the schema is ready on first deploy.
-# Failures are tolerated (e.g. if migrations were already run).
 php artisan migrate --force 2>/dev/null || true
 
 # ─── Start Apache in the foreground ───
