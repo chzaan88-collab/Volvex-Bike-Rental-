@@ -4,7 +4,6 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Session;
-use Illuminate\Http\Client\PendingRequest;
 
 class FastApiClient
 {
@@ -17,26 +16,26 @@ class FastApiClient
             ?: env('VITE_API_BASE_URL') 
             ?: 'https://volvex-bike-rental.onrender.com/api/v1';
 
-        if (empty($url)) {
-            $url = 'https://volvex-bike-rental.onrender.com/api/v1';
-        }
-
-        $this->baseUrl = rtrim($url, '/');
+        $this->baseUrl = !empty($url) ? rtrim($url, '/') : 'https://volvex-bike-rental.onrender.com/api/v1';
     }
 
-    protected function client(): PendingRequest
+    private function getFullUrl(string $endpoint): string
     {
-        $targetUrl = !empty($this->baseUrl) 
-            ? $this->baseUrl 
-            : 'https://volvex-bike-rental.onrender.com/api/v1';
+        $endpoint = '/' . ltrim($endpoint, '/');
+        return $this->baseUrl . $endpoint;
+    }
 
-        $request = Http::baseUrl($targetUrl)->acceptJson();
+    private function getHeaders(): array
+    {
+        $headers = [
+            'Accept' => 'application/json',
+        ];
 
         if ($token = Session::get('fastapi_token')) {
-            $request = $request->withToken($token);
+            $headers['Authorization'] = 'Bearer ' . $token;
         }
 
-        return $request;
+        return $headers;
     }
 
     // Auth Helper Methods
@@ -50,24 +49,24 @@ class FastApiClient
         return $this->post('/auth/login', $credentials);
     }
 
-    // Generic HTTP Verbs
+    // Direct HTTP Request Methods with Full URLs
     public function post(string $endpoint, array $data = [])
     {
-        return $this->client()->post($endpoint, $data);
+        return Http::withHeaders($this->getHeaders())->post($this->getFullUrl($endpoint), $data);
     }
 
     public function get(string $endpoint, array $query = [])
     {
-        return $this->client()->get($endpoint, $query);
+        return Http::withHeaders($this->getHeaders())->get($this->getFullUrl($endpoint), $query);
     }
 
     public function put(string $endpoint, array $data = [])
     {
-        return $this->client()->put($endpoint, $data);
+        return Http::withHeaders($this->getHeaders())->put($this->getFullUrl($endpoint), $data);
     }
 
     public function delete(string $endpoint, array $data = [])
     {
-        return $this->client()->delete($endpoint, $data);
+        return Http::withHeaders($this->getHeaders())->delete($this->getFullUrl($endpoint), $data);
     }
 }
