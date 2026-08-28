@@ -1,11 +1,22 @@
-public function __construct()
+<?php
+
+namespace App\Services;
+
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Http\Client\PendingRequest;
+
+class FastApiClient
+{
+    protected string $baseUrl;
+
+    public function __construct()
     {
         $url = config('services.fastapi.base_url') 
             ?: env('API_BASE_URL') 
             ?: env('VITE_API_BASE_URL') 
             ?: 'https://volvex-bike-rental.onrender.com/api/v1';
 
-        // Fallback if URL still resolves empty
         if (empty($url)) {
             $url = 'https://volvex-bike-rental.onrender.com/api/v1';
         }
@@ -15,7 +26,6 @@ public function __construct()
 
     protected function client(): PendingRequest
     {
-        // Absolute fallback check directly before sending HTTP request
         $targetUrl = !empty($this->baseUrl) 
             ? $this->baseUrl 
             : 'https://volvex-bike-rental.onrender.com/api/v1';
@@ -28,3 +38,24 @@ public function __construct()
 
         return $request;
     }
+
+    public function post(string $endpoint, array $data = [])
+    {
+        return $this->client()->post($endpoint, $data);
+    }
+
+    public function get(string $endpoint, array $query = [])
+    {
+        return $this->client()->get($endpoint, $query);
+    }
+
+    public function put(string $endpoint, array $data = [])
+    {
+        return $this->client()->put($endpoint, $data);
+    }
+
+    public function delete(string $endpoint, array $data = [])
+    {
+        return $this->client()->delete($endpoint, $data);
+    }
+}
